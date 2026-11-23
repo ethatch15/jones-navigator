@@ -99,6 +99,50 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outlin
   #more { display: inline-block !important; }
   .hello h2 { font-size: 23px; }
 }
+/* Tabs */
+.tabs { display: flex; gap: 4px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.tabs a { padding: 11px 14px 9px; font-weight: 600; font-size: 14px; color: var(--muted); text-decoration: none; border-bottom: 3px solid transparent; }
+.tabs a:hover { color: var(--accent); }
+.tabs a.on { color: var(--accent); border-bottom-color: var(--accent); }
+.view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+[hidden], .view[hidden] { display: none !important; }
+/* Schedule */
+#view-schedule { overflow-y: auto; padding: 24px 16px 40px; }
+.sch { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; width: 100%; }
+.sch-head h2 { font: 800 24px/1.2 var(--display); margin: 4px 0 4px; color: var(--accent); }
+.sch-head p { margin: 0; color: var(--muted); font-size: 14px; max-width: 70ch; }
+.terms { display: flex; gap: 6px; flex-wrap: wrap; }
+.terms button { font: 600 13px var(--body); padding: 7px 14px; border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+.terms button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.sch-grid { display: grid; grid-template-columns: minmax(0, 430px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; min-width: 0; }
+.card h3 { font: 700 15px var(--display); margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.card h3 small { font: 500 12px var(--body); color: var(--muted); }
+.course { display: grid; grid-template-columns: 1fr auto; gap: 6px 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+.course:first-of-type { border-top: 0; }
+.course input[type=text] { font: 500 14px var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; min-width: 0; width: 100%; }
+.course .del { font: 500 12px var(--body); color: var(--muted); background: none; border: 0; cursor: pointer; padding: 4px; }
+.course .del:hover { color: var(--warn); }
+.meet { grid-column: 1 / -1; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.day { font: 600 11.5px var(--body); width: 30px; padding: 4px 0; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); cursor: pointer; }
+.day.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.meet input[type=time] { font: 13px var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 3px 4px; }
+.sch-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.btn { font: 600 13px var(--body); padding: 8px 14px; border-radius: 4px; cursor: pointer; border: 1px solid var(--accent); background: var(--panel); color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.quiet { border-color: var(--line); color: var(--muted); }
+.clashnote { font-size: 13px; color: var(--warn); background: var(--warn-soft); padding: 8px 10px; border-radius: 4px; margin: 0 0 10px; }
+.unsched { font-size: 12.5px; color: var(--muted); margin: 10px 0 0; }
+.week-wrap { overflow-x: auto; }
+.week { display: grid; grid-template-columns: 46px repeat(5, minmax(96px, 1fr)); min-width: 540px; }
+.week .dh { font: 600 12px var(--body); text-align: center; padding: 4px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.hours { position: relative; }
+.hours span { position: absolute; right: 6px; font-size: 11px; color: var(--muted); transform: translateY(-50%); font-variant-numeric: tabular-nums; }
+.col-day { position: relative; border-left: 1px solid var(--line); background-image: linear-gradient(var(--line) 1px, transparent 1px); background-size: 100% 44px; }
+.blk { position: absolute; left: 3px; right: 3px; border-radius: 4px; background: var(--accent); color: var(--accent-ink); font-size: 11.5px; line-height: 1.25; padding: 4px 6px; overflow: hidden; }
+.blk b { display: block; font-weight: 600; }
+.blk.clash { background: var(--warn); color: #fff; }
+@media (max-width: 960px) { .sch-grid { grid-template-columns: minmax(0, 1fr); } }
 #more { display: none; font: 500 13px var(--body); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; }
 </style>
 </head>
@@ -148,6 +192,38 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outlin
   </aside>
 
   <main>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#chat" data-tab="chat">Chat</a>
+      <a href="#schedule" data-tab="schedule">Class schedule</a>
+    </nav>
+    <section class="view" id="view-schedule" hidden>
+      <div class="sch">
+        <div class="sch-head">
+          <p class="eyebrow">Plan your terms</p>
+          <h2>Class schedule</h2>
+          <p>Build each term, add meeting days and times, and spot conflicts on the weekly calendar. 1Y terms start with the sample core from a recent program card. Check the real sections, times and requirements in ESTHER and with the program office. Your schedule is saved in this browser only.</p>
+        </div>
+        <div class="terms" id="terms"></div>
+        <div class="sch-grid">
+          <div class="card">
+            <h3><span id="term-title">Courses</span><small id="term-count"></small></h3>
+            <div id="courses"></div>
+            <div class="sch-actions">
+              <button class="btn" type="button" id="add-course">Add course</button>
+              <button class="btn primary" type="button" id="ask-sched">Ask Navigator to review this term</button>
+              <button class="btn quiet" type="button" id="reset-term">Reset term</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Weekly calendar <small>8 AM to 10 PM</small></h3>
+            <p class="clashnote" id="clashnote" hidden></p>
+            <div class="week-wrap"><div class="week" id="week"></div></div>
+            <p class="unsched" id="unsched"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="view" id="view-chat">
     <div id="log">
       <div class="col" id="thread">
         <div class="hello" id="hello">
@@ -171,6 +247,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outlin
       </div>
       <p class="hint">Enter to send, Shift+Enter for a new line.</p>
     </form>
+    </section>
   </main>
 </div>
 
@@ -281,9 +358,159 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outlin
     Array.prototype.slice.call(thread.querySelectorAll(".msg, .err, .typing")).forEach(function (n) { n.remove(); });
     hello.hidden = false; input.focus();
   });
+  window.jnAsk = ask;
   document.getElementById("more").addEventListener("click", function () {
     var side = document.getElementById("side"); side.classList.toggle("open");
     this.textContent = side.classList.contains("open") ? "Hide official links" : "Show official links";
+  });
+})();
+</script>
+<script>
+(function () {
+  // ---- Tabs ----
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".tabs a"));
+  function showTab() {
+    var t = location.hash === "#schedule" ? "schedule" : "chat";
+    document.getElementById("view-chat").hidden = t !== "chat";
+    document.getElementById("view-schedule").hidden = t !== "schedule";
+    tabs.forEach(function (a) { a.classList.toggle("on", a.dataset.tab === t); });
+  }
+  window.addEventListener("hashchange", showTab);
+  showTab();
+
+  // ---- Schedule ----
+  var TERMS = [["1yf", "1Y Fall"], ["1ys", "1Y Spring"], ["2yf", "2Y Fall"], ["2ys", "2Y Spring"]];
+  var DAYS = ["M", "T", "W", "Th", "F"];
+  var DAYNAMES = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+  var SAMPLE = {
+    "1yf": ["Strategy I", "Managerial Economics", "Data Analysis", "Negotiations", "Financial Accounting", "Organizational Behavior", "Finance", "Marketing"],
+    "1ys": ["Strategy II", "Corporate Social Responsibility", "Operations Management", "Managerial Accounting", "Leading Change", "Action Learning Project (MGMT 599)", "Custom Core choice 1", "Custom Core choice 2"],
+    "2yf": [], "2ys": []
+  };
+  var START = 8, END = 22, PX = 44; // calendar hours and pixels per hour
+  var KEY = "jn-schedule-v1";
+  var seq = 0;
+  function uid() { seq += 1; return "c" + Date.now().toString(36) + seq; }
+  function sample(t) { return SAMPLE[t].map(function (n) { return { id: uid(), name: n, days: [], start: "", end: "" }; }); }
+  function fresh() { var s = { term: "1yf", courses: {} }; TERMS.forEach(function (t) { s.courses[t[0]] = sample(t[0]); }); return s; }
+  var state;
+  try { state = JSON.parse(localStorage.getItem(KEY)); } catch (e) { state = null; }
+  if (!state || !state.courses) state = fresh();
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function list() { return state.courses[state.term]; }
+  function mins(t) { if (!t) return null; var p = t.split(":"); return (+p[0]) * 60 + (+p[1]); }
+  function fmt(t) { var m = mins(t), h = Math.floor(m / 60), mm = m % 60; var ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12; return h + (mm ? ":" + (mm < 10 ? "0" : "") + mm : "") + " " + ap; }
+  function timed(c) { var a = mins(c.start), b = mins(c.end); return c.days.length && a != null && b != null && b > a; }
+
+  var termsEl = document.getElementById("terms");
+  TERMS.forEach(function (t) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = t[1]; b.dataset.term = t[0];
+    b.addEventListener("click", function () { state.term = t[0]; save(); renderAll(); });
+    termsEl.appendChild(b);
+  });
+
+  function renderList() {
+    var box = document.getElementById("courses"); box.innerHTML = "";
+    var termName = TERMS.filter(function (t) { return t[0] === state.term; })[0][1];
+    document.getElementById("term-title").textContent = termName + " courses";
+    document.getElementById("term-count").textContent = list().length + (list().length === 1 ? " course" : " courses");
+    Array.prototype.forEach.call(termsEl.children, function (b) { b.classList.toggle("on", b.dataset.term === state.term); });
+    if (!list().length) {
+      var p = document.createElement("p"); p.className = "unsched"; p.style.margin = "0";
+      p.textContent = "No courses yet. Add your electives for this term.";
+      box.appendChild(p);
+    }
+    list().forEach(function (c) {
+      var row = document.createElement("div"); row.className = "course";
+      var name = document.createElement("input"); name.type = "text"; name.id = "n-" + c.id; name.value = c.name;
+      name.placeholder = "Course name"; name.setAttribute("aria-label", "Course name");
+      name.addEventListener("input", function () { c.name = name.value; save(); renderWeek(); });
+      var del = document.createElement("button"); del.type = "button"; del.className = "del"; del.textContent = "Remove";
+      del.addEventListener("click", function () { state.courses[state.term] = list().filter(function (x) { return x !== c; }); save(); renderAll(); });
+      var meet = document.createElement("div"); meet.className = "meet";
+      DAYS.forEach(function (d) {
+        var b = document.createElement("button"); b.type = "button"; b.className = "day" + (c.days.indexOf(d) >= 0 ? " on" : ""); b.textContent = d;
+        b.setAttribute("aria-pressed", c.days.indexOf(d) >= 0);
+        b.addEventListener("click", function () {
+          var i = c.days.indexOf(d); if (i >= 0) c.days.splice(i, 1); else c.days.push(d);
+          b.classList.toggle("on", i < 0); b.setAttribute("aria-pressed", i < 0); save(); renderWeek();
+        });
+        meet.appendChild(b);
+      });
+      function timeInput(key, label) {
+        var t = document.createElement("input"); t.type = "time"; t.id = key[0] + "-" + c.id; t.value = c[key]; t.step = 300; t.setAttribute("aria-label", label);
+        t.addEventListener("change", function () { c[key] = t.value; save(); renderWeek(); });
+        return t;
+      }
+      meet.appendChild(timeInput("start", "Start time"));
+      meet.appendChild(document.createTextNode("to"));
+      meet.appendChild(timeInput("end", "End time"));
+      row.appendChild(name); row.appendChild(del); row.appendChild(meet);
+      box.appendChild(row);
+    });
+  }
+
+  function renderWeek() {
+    var wk = document.getElementById("week"); wk.innerHTML = "";
+    var h = (END - START) * PX;
+    wk.appendChild(document.createElement("div"));
+    DAYNAMES.forEach(function (d) { var e = document.createElement("div"); e.className = "dh"; e.textContent = d; wk.appendChild(e); });
+    var hours = document.createElement("div"); hours.className = "hours"; hours.style.height = h + "px";
+    for (var i = START; i <= END; i += 2) {
+      var s = document.createElement("span"); s.style.top = ((i - START) * PX) + "px";
+      s.textContent = (i % 12 || 12) + (i >= 12 ? "p" : "a"); hours.appendChild(s);
+    }
+    wk.appendChild(hours);
+    var clashes = 0, clashNames = {};
+    DAYS.forEach(function (d) {
+      var col = document.createElement("div"); col.className = "col-day"; col.style.height = h + "px";
+      var todays = list().filter(function (c) { return timed(c) && c.days.indexOf(d) >= 0; });
+      todays.forEach(function (c) {
+        var a = mins(c.start), b = mins(c.end);
+        var clash = todays.some(function (o) { return o !== c && mins(o.start) < b && mins(o.end) > a; });
+        if (clash) { clashes++; clashNames[c.name || "Untitled"] = 1; }
+        var top = Math.max(0, (a - START * 60) / 60 * PX), bottom = Math.min(h, (b - START * 60) / 60 * PX);
+        if (bottom <= 0 || top >= h) return;
+        var blk = document.createElement("div"); blk.className = "blk" + (clash ? " clash" : "");
+        blk.style.top = top + "px"; blk.style.height = Math.max(18, bottom - top - 2) + "px";
+        var nb = document.createElement("b"); nb.textContent = c.name || "Untitled";
+        blk.appendChild(nb); blk.appendChild(document.createTextNode(fmt(c.start) + " to " + fmt(c.end)));
+        blk.title = (c.name || "Untitled") + ", " + fmt(c.start) + " to " + fmt(c.end);
+        col.appendChild(blk);
+      });
+      wk.appendChild(col);
+    });
+    var note = document.getElementById("clashnote");
+    var names = Object.keys(clashNames);
+    note.hidden = !names.length;
+    if (names.length) note.textContent = "Time conflict: " + names.join(", ") + " overlap.";
+    var un = list().filter(function (c) { return !timed(c); }).map(function (c) { return c.name || "Untitled"; });
+    document.getElementById("unsched").textContent = un.length ? "No meeting time yet: " + un.join(", ") + "." : "";
+  }
+
+  function renderAll() { renderList(); renderWeek(); }
+  renderAll();
+
+  document.getElementById("add-course").addEventListener("click", function () {
+    var c = { id: uid(), name: "", days: [], start: "", end: "" };
+    list().push(c); save(); renderAll();
+    var el = document.getElementById("n-" + c.id); if (el) el.focus();
+  });
+  var resetBtn = document.getElementById("reset-term"), armed = false;
+  resetBtn.addEventListener("click", function () {
+    if (!armed) { armed = true; resetBtn.textContent = "Click again to reset"; setTimeout(function () { armed = false; resetBtn.textContent = "Reset term"; }, 3000); return; }
+    armed = false; resetBtn.textContent = "Reset term";
+    state.courses[state.term] = sample(state.term); save(); renderAll();
+  });
+  document.getElementById("ask-sched").addEventListener("click", function () {
+    var termName = TERMS.filter(function (t) { return t[0] === state.term; })[0][1];
+    var lines = list().map(function (c) {
+      return "- " + (c.name || "Untitled") + (timed(c) ? " (" + c.days.join("/") + " " + fmt(c.start) + " to " + fmt(c.end) + ")" : " (no time set)");
+    });
+    var msg = "Here's my " + termName + " class schedule:\n" + (lines.join("\n") || "- (no courses yet)") +
+      "\n\nPlease review it against my goals: check the workload balance, suggest electives or specializations that fit, and point out anything I should confirm with the program office.";
+    location.hash = "chat";
+    if (window.jnAsk) window.jnAsk(msg);
   });
 })();
 </script>
