@@ -124,6 +124,45 @@ function cleanMessages(raw) {
   return msgs.map((m) => ({ role: m.role, content: m.content }));
 }
 
+// Normalize a URL for comparison: no protocol, no country subdomain, no query or trailing slash.
+function normUrl(u) {
+  try {
+    const x = new URL(u);
+    const host = x.hostname.toLowerCase().replace(/^([a-z]{2}|www)\./, "");
+    return host + decodeURIComponent(x.pathname).toLowerCase().replace(/\/+$/, "");
+  } catch {
+    return "";
+  }
+}
+
+// Every URL that web search actually returned in this message.
+function collectSearchUrls(message, into) {
+  for (const block of message.content) {
+    if (block.type === "web_search_tool_result" && Array.isArray(block.content)) {
+      for (const r of block.content) if (r && r.url) into.add(normUrl(r.url));
+    }
+    if (block.type === "text") {
+      for (const c of block.citations || []) if (c.url) into.add(normUrl(c.url));
+    }
+  }
+}
+
+// Remove links to individual LinkedIn profiles that didn't come from a search result,
+// so the bot can't hand students a made-up profile URL.
+function dropUnverifiedProfileLinks(text, seen) {
+  let removed = 0;
+  const out = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]*linkedin\.com\/in\/[^)\s]*)\)/gi, (all, label, url) => {
+    if (seen.has(normUrl(url))) return all;
+    removed++;
+    return `${label} (LinkedIn link not verified)`;
+  }).replace(/(^|[\s(<])(https?:\/\/[^\s)>]*linkedin\.com\/in\/[^\s)>]*)/gi, (all, pre, url) => {
+    if (seen.has(normUrl(url))) return all;
+    removed++;
+    return `${pre}(LinkedIn link not verified)`;
+  });
+  return { text: out, removed };
+}
+
 // Pull the reply text and any web-search citations out of a Claude response.
 function readResponse(message) {
   let text = "";
@@ -188,7 +227,8 @@ export default {
     const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
     const tools = [SCHEDULE_TOOL];
     if (env.WEB_SEARCH === "on") {
-      tools.push({ type: "web_search_20260209", name: "web_search", max_uses: 3, allowed_domains: ["rice.edu"] });
+      // Open web: rice.edu for Rice facts, plus LinkedIn and other public pages for finding alumni.
+      tools.push({ type: "web_search_20260209", name: "web_search", max_uses: 10 });
     }
 
     // Attach the student's current Class schedule to their latest message so Claude can read and edit it.
@@ -206,6 +246,7 @@ export default {
     }
 
     const scheduleUpdates = [];
+    const searchUrls = new Set();
     let message;
     try {
       for (let i = 0; i < MAX_ROUNDS; i++) {
@@ -223,6 +264,7 @@ export default {
             messages: convo,
           })
           .finalMessage();
+        collectSearchUrls(message, searchUrls);
         if (message.stop_reason === "pause_turn") {
           // Web search paused mid-turn: send the partial turn back so the server resumes it.
           convo.push({ role: "assistant", content: message.content });
@@ -271,7 +313,11 @@ export default {
       return json({ error: "Jones Navigator can't help with that request. Try asking about Rice Business resources, clubs, alumni, or your MBA plan." }, 200, cors.headers);
     }
 
-    const { text, sources } = readResponse(message);
+    const read = readResponse(message);
+    const sources = read.sources;
+    const checked = dropUnverifiedProfileLinks(read.text, searchUrls);
+    if (checked.removed) console.log("Removed unverified LinkedIn links:", checked.removed);
+    const text = checked.text;
     if (!text && !scheduleUpdates.length) {
       return json({ error: "The answer came back empty. Try a narrower question." }, 502, cors.headers);
     }
