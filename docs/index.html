@@ -76,6 +76,10 @@ main { display: flex; flex-direction: column; min-height: 0; }
 .typing span:nth-child(2) { animation-delay: .2s; } .typing span:nth-child(3) { animation-delay: .4s; }
 @keyframes blink { 0%, 80%, 100% { opacity: .2 } 40% { opacity: 1 } }
 @media (prefers-reduced-motion: reduce) { .typing span { animation: none; } }
+.schednote { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; background: var(--accent-soft); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; padding: 9px 14px; font-size: 14px; }
+.schednote a { color: var(--accent); font-weight: 600; }
+.schednote button { font: 500 13px var(--body); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 10px; cursor: pointer; }
+.schednote button:hover { color: var(--accent); border-color: var(--accent); }
 .err { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 10px 14px; font-size: 14px; }
 .setup { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 12px 16px; font-size: 14px; }
 form { border-top: 1px solid var(--line); background: var(--panel); padding: 14px 16px 18px; }
@@ -201,7 +205,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outlin
         <div class="sch-head">
           <p class="eyebrow">Plan your terms</p>
           <h2>Class schedule</h2>
-          <p>Build each term, add meeting days and times, and spot conflicts on the weekly calendar. 1Y terms start with the sample core from a recent program card. Check the real sections, times and requirements in ESTHER and with the program office. Your schedule is saved in this browser only.</p>
+          <p>Build each term, add meeting days and times, and spot conflicts on the weekly calendar. You can also ask the chat to change it, for example "Add Corporate Finance to 2Y Fall on Mon/Wed 10:00 to 11:30." 1Y terms start with the sample core from a recent program card. Check the real sections, times and requirements in ESTHER and with the program office. Your schedule is saved in this browser only.</p>
         </div>
         <div class="terms" id="terms"></div>
         <div class="sch-grid">
@@ -310,6 +314,20 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outlin
     m.appendChild(b); m.appendChild(tools); thread.appendChild(m); scroll();
   }
 
+  function addScheduleNote(result) {
+    if (!result || !result.terms.length) return;
+    var n = document.createElement("div"); n.className = "schednote";
+    var t = document.createElement("span");
+    t.textContent = "Updated your " + result.terms.join(" and ") + " schedule.";
+    var view = document.createElement("a"); view.href = "#schedule"; view.textContent = "View schedule";
+    var undo = document.createElement("button"); undo.type = "button"; undo.textContent = "Undo";
+    undo.addEventListener("click", function () {
+      result.undo(); t.textContent = "Change undone. Your schedule is back to how it was."; undo.remove();
+    });
+    n.appendChild(t); n.appendChild(view); n.appendChild(undo);
+    thread.appendChild(n); scroll();
+  }
+
   function addErr(text) {
     var e = document.createElement("div"); e.className = "err"; e.textContent = text;
     thread.appendChild(e); scroll();
@@ -325,7 +343,9 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outlin
     var t = document.createElement("div"); t.className = "typing"; t.innerHTML = "Thinking<span>.</span><span>.</span><span>.</span>";
     thread.appendChild(t); scroll();
     try {
-      var res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: history.slice(-20) }) });
+      var payload = { messages: history.slice(-20) };
+      if (window.jnSchedule) payload.schedule = window.jnSchedule.snapshot();
+      var res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       var data = await res.json().catch(function () { return {}; });
       t.remove();
       if (!res.ok || !data.reply) {
@@ -334,6 +354,9 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outlin
       } else {
         history.push({ role: "assistant", content: data.reply });
         addBot(data.reply, data.sources);
+        if (Array.isArray(data.scheduleUpdates) && data.scheduleUpdates.length && window.jnSchedule) {
+          addScheduleNote(window.jnSchedule.apply(data.scheduleUpdates));
+        }
       }
     } catch (e) {
       t.remove(); history.pop();
@@ -490,6 +513,32 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outlin
 
   function renderAll() { renderList(); renderWeek(); }
   renderAll();
+
+  // Lets the chat read the schedule and apply edits Claude makes.
+  window.jnSchedule = {
+    snapshot: function () {
+      return TERMS.map(function (t) {
+        return { term: t[0], courses: (state.courses[t[0]] || []).map(function (c) {
+          return { name: c.name, days: c.days.slice(), start: c.start, end: c.end };
+        }) };
+      });
+    },
+    apply: function (updates) {
+      var before = JSON.parse(JSON.stringify(state));
+      var names = [];
+      updates.forEach(function (u) {
+        if (!state.courses[u.term] || !Array.isArray(u.courses)) return;
+        state.courses[u.term] = u.courses.map(function (c) {
+          return { id: uid(), name: String(c.name || ""), days: Array.isArray(c.days) ? c.days.filter(function (d) { return DAYS.indexOf(d) >= 0; }) : [], start: c.start || "", end: c.end || "" };
+        });
+        state.term = u.term;
+        var label = TERMS.filter(function (t) { return t[0] === u.term; })[0][1];
+        if (names.indexOf(label) < 0) names.push(label);
+      });
+      save(); renderAll();
+      return { terms: names, undo: function () { state = before; save(); renderAll(); } };
+    }
+  };
 
   document.getElementById("add-course").addEventListener("click", function () {
     var c = { id: uid(), name: "", days: [], start: "", end: "" };

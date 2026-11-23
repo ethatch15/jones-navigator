@@ -8,7 +8,81 @@ import { SYSTEM_PROMPT } from "./knowledge.js";
 const MAX_MESSAGES = 20;          // conversation turns sent per request
 const MAX_CHARS_PER_MESSAGE = 4000;
 const MAX_TOTAL_CHARS = 40000;
-const MAX_CONTINUATIONS = 3;      // resumes after a web-search pause_turn
+const MAX_ROUNDS = 5;             // model calls per question (web-search pauses + schedule edits)
+
+const TERMS = { "1yf": "1Y Fall", "1ys": "1Y Spring", "2yf": "2Y Fall", "2ys": "2Y Spring" };
+const DAYS = ["M", "T", "W", "Th", "F"];
+const MAX_COURSES = 12;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+// Client tool: Claude replaces one term's course list in the student's Class schedule tab.
+// The Worker validates the edit and returns it to the browser, which applies it.
+const SCHEDULE_TOOL = {
+  name: "update_schedule",
+  description:
+    "Replace the full course list for one term in the student's Class schedule tab. Use this only when the student asks you to add, remove, rename, or retime courses in their schedule. Send the complete list for that term (keep every course that should stay, unchanged), not just the changes. Times are 24-hour HH:MM, or empty strings when the meeting time is unknown. Never invent section times; leave days and times empty unless the student gave them.",
+  strict: true,
+  input_schema: {
+    type: "object",
+    additionalProperties: false,
+    required: ["term", "courses"],
+    properties: {
+      term: { type: "string", enum: Object.keys(TERMS), description: "1yf = 1Y Fall, 1ys = 1Y Spring, 2yf = 2Y Fall, 2ys = 2Y Spring" },
+      courses: {
+        type: "array",
+        description: "Every course for this term after the change, in display order.",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["name", "days", "start", "end"],
+          properties: {
+            name: { type: "string", description: "Course name, e.g. 'Corporate Finance'" },
+            days: { type: "array", items: { type: "string", enum: DAYS }, description: "Meeting days; empty if unknown" },
+            start: { type: "string", description: "Start time as 24-hour HH:MM, or empty string" },
+            end: { type: "string", description: "End time as 24-hour HH:MM, or empty string" },
+          },
+        },
+      },
+    },
+  },
+};
+
+// Returns a cleaned {term, courses} or an error string.
+function validateScheduleEdit(input) {
+  if (!input || typeof input !== "object") return "Input must be an object.";
+  if (!TERMS[input.term]) return "term must be one of 1yf, 1ys, 2yf, 2ys.";
+  if (!Array.isArray(input.courses)) return "courses must be an array.";
+  if (input.courses.length > MAX_COURSES) return `A term can hold at most ${MAX_COURSES} courses.`;
+  const courses = [];
+  for (const c of input.courses) {
+    if (!c || typeof c.name !== "string" || !c.name.trim() || c.name.length > 80) return "Each course needs a name under 80 characters.";
+    if (!Array.isArray(c.days) || c.days.some((d) => !DAYS.includes(d))) return "days may only contain M, T, W, Th, F.";
+    const start = typeof c.start === "string" ? c.start : "";
+    const end = typeof c.end === "string" ? c.end : "";
+    if ((start && !TIME_RE.test(start)) || (end && !TIME_RE.test(end))) return "Times must be 24-hour HH:MM or empty.";
+    if (start && end && end <= start) return `"${c.name}" ends before it starts.`;
+    courses.push({ name: c.name.trim(), days: DAYS.filter((d) => c.days.includes(d)), start, end });
+  }
+  return { term: input.term, courses };
+}
+
+// Accepts the browser's copy of the schedule; returns readable text for Claude, or "" if missing/invalid.
+function describeSchedule(raw) {
+  if (!Array.isArray(raw)) return "";
+  const lines = [];
+  for (const t of raw.slice(0, 4)) {
+    if (!t || !TERMS[t.term] || !Array.isArray(t.courses)) continue;
+    lines.push(`${TERMS[t.term]} (${t.term}):`);
+    if (!t.courses.length) lines.push("  (no courses)");
+    for (const c of t.courses.slice(0, MAX_COURSES)) {
+      const name = String((c && c.name) || "Untitled").slice(0, 80).replace(/[<>]/g, "");
+      const days = Array.isArray(c.days) ? c.days.filter((d) => DAYS.includes(d)).join("/") : "";
+      const time = TIME_RE.test(c.start || "") && TIME_RE.test(c.end || "") ? ` ${c.start}-${c.end}` : "";
+      lines.push(`  - ${name}${days || time ? ` (${days || "no days"}${time})` : " (no time set)"}`);
+    }
+  }
+  return lines.join("\n");
+}
 
 function corsHeaders(origin, env) {
   const allowed = (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -112,14 +186,29 @@ export default {
     }
 
     const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-    const tools = env.WEB_SEARCH === "on"
-      ? [{ type: "web_search_20260209", name: "web_search", max_uses: 3, allowed_domains: ["rice.edu"] }]
-      : undefined;
+    const tools = [SCHEDULE_TOOL];
+    if (env.WEB_SEARCH === "on") {
+      tools.push({ type: "web_search_20260209", name: "web_search", max_uses: 3, allowed_domains: ["rice.edu"] });
+    }
 
+    // Attach the student's current Class schedule to their latest message so Claude can read and edit it.
     const convo = [...messages];
+    const schedText = describeSchedule(body.schedule);
+    if (schedText) {
+      const last = convo[convo.length - 1];
+      convo[convo.length - 1] = {
+        role: "user",
+        content: [
+          { type: "text", text: last.content },
+          { type: "text", text: `<current_class_schedule>\n${schedText}\n</current_class_schedule>` },
+        ],
+      };
+    }
+
+    const scheduleUpdates = [];
     let message;
     try {
-      for (let i = 0; i <= MAX_CONTINUATIONS; i++) {
+      for (let i = 0; i < MAX_ROUNDS; i++) {
         message = await client.beta.messages
           .stream({
             model: env.MODEL || "claude-opus-5-5",
@@ -127,16 +216,43 @@ export default {
             // The instructions and knowledge files are identical on every request, so cache them.
             system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
             output_config: { effort: env.EFFORT || "low" },
-            ...(tools ? { tools } : {}),
+            tools,
             // If Claude declines a request on policy grounds, let the API retry on a fallback model.
             betas: ["server-side-fallback-2026-07-01"],
             fallbacks: "default",
             messages: convo,
           })
           .finalMessage();
-        if (message.stop_reason !== "pause_turn") break;
-        // Web search paused mid-turn: send the partial turn back so the server resumes it.
+        if (message.stop_reason === "pause_turn") {
+          // Web search paused mid-turn: send the partial turn back so the server resumes it.
+          convo.push({ role: "assistant", content: message.content });
+          continue;
+        }
+        if (message.stop_reason !== "tool_use") break;
+
+        // Claude asked to edit the schedule: validate each edit, record it for the browser,
+        // and tell Claude whether it was saved.
         convo.push({ role: "assistant", content: message.content });
+        const results = [];
+        for (const block of message.content) {
+          if (block.type !== "tool_use") continue;
+          if (block.name !== SCHEDULE_TOOL.name) {
+            results.push({ type: "tool_result", tool_use_id: block.id, content: "Unknown tool.", is_error: true });
+            continue;
+          }
+          const edit = validateScheduleEdit(block.input);
+          if (typeof edit === "string") {
+            results.push({ type: "tool_result", tool_use_id: block.id, content: `Not saved: ${edit}`, is_error: true });
+          } else {
+            scheduleUpdates.push(edit);
+            results.push({
+              type: "tool_result",
+              tool_use_id: block.id,
+              content: `Saved. The student's ${TERMS[edit.term]} schedule now has ${edit.courses.length} course(s). Tell them what changed and that they can review or undo it in the Class schedule tab.`,
+            });
+          }
+        }
+        convo.push({ role: "user", content: results });
       }
     } catch (err) {
       const status = err && err.status;
@@ -156,9 +272,9 @@ export default {
     }
 
     const { text, sources } = readResponse(message);
-    if (!text) {
+    if (!text && !scheduleUpdates.length) {
       return json({ error: "The answer came back empty. Try a narrower question." }, 502, cors.headers);
     }
-    return json({ reply: text, sources }, 200, cors.headers);
+    return json({ reply: text || "I updated your schedule.", sources, scheduleUpdates }, 200, cors.headers);
   },
 };
