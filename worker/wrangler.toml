@@ -6,9 +6,9 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 # Websites allowed to call this Worker, comma-separated. Update this if your GitHub username changes.
 ALLOWED_ORIGINS = "https://ethatch15.github.io,http://localhost:8000"
-# Claude model. claude-opus-5-5 is the most capable everyday model.
-# For lower cost, claude-sonnet-5-5 also works with these settings.
-MODEL = "claude-opus-5-5"
+# Claude model. claude-sonnet-5-5 costs half as much as claude-opus-5-5;
+# switch back to claude-opus-5-5 for the most capable answers.
+MODEL = "claude-sonnet-5-5"
 # How hard Claude thinks before answering: low, medium, high. "low" keeps chat fast and cheap.
 EFFORT = "low"
 MAX_TOKENS = "16000"

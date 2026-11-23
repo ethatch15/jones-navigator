@@ -7,7 +7,7 @@ An AI guide that helps Rice Business (Jones Graduate School of Business) student
 ## How it works
 ```
 Student's browser ──► GitHub Pages site (docs/) ──► Cloudflare Worker (worker/) ──► Claude API
-                        public HTML, no secrets       holds the Claude key           claude-opus-5-5
+                        public HTML, no secrets       holds the Claude key           claude-sonnet-5-5
 ```
 - `docs/`: the website. GitHub Pages serves this folder.
 - `worker/`: a small Cloudflare Worker. It adds the Jones Navigator instructions and knowledge files to each question, calls Claude with your key, and only accepts requests from your site.
@@ -62,7 +62,7 @@ cd worker && npm install && npm run deploy
 | Setting | Default | What it does |
 |---|---|---|
 | `ALLOWED_ORIGINS` | your GitHub Pages site and localhost:8000 | Sites allowed to use the Worker |
-| `MODEL` | `claude-opus-5-5` | Claude model. `claude-sonnet-5-5` costs less |
+| `MODEL` | `claude-sonnet-5-5` | Claude model. `claude-opus-5-5` gives the most capable answers at about twice the cost |
 | `EFFORT` | `low` | How hard Claude thinks before answering (`low`, `medium`, `high`) |
 | `WEB_SEARCH` | `on` | Lets Claude search rice.edu sites for current info. Set it to `off` to save money |
 | `MAX_TOKENS` | `16000` | Caps the length (and cost) of each answer |
