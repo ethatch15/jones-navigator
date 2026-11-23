@@ -1,12 +1,14 @@
-// Jones Navigator API: a Cloudflare Worker that keeps the OpenAI key secret.
+// Jones Navigator API: a Cloudflare Worker that keeps the Claude API key secret.
 // The public website (GitHub Pages) sends the chat history here. This Worker adds the
-// Jones Navigator instructions and knowledge files, calls OpenAI, and returns the reply.
+// Jones Navigator instructions and knowledge files, calls Claude, and returns the reply.
 
+import Anthropic from "@anthropic-ai/sdk";
 import { SYSTEM_PROMPT } from "./knowledge.js";
 
 const MAX_MESSAGES = 20;          // conversation turns sent per request
 const MAX_CHARS_PER_MESSAGE = 4000;
 const MAX_TOTAL_CHARS = 40000;
+const MAX_CONTINUATIONS = 3;      // resumes after a web-search pause_turn
 
 function corsHeaders(origin, env) {
   const allowed = (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -32,7 +34,10 @@ function json(body, status, headers) {
 
 function cleanMessages(raw) {
   if (!Array.isArray(raw) || raw.length === 0) return null;
-  const msgs = raw.slice(-MAX_MESSAGES);
+  let msgs = raw.slice(-MAX_MESSAGES);
+  // The conversation must start with a user turn.
+  while (msgs.length && msgs[0].role !== "user") msgs = msgs.slice(1);
+  if (!msgs.length) return null;
   let total = 0;
   for (const m of msgs) {
     if (!m || (m.role !== "user" && m.role !== "assistant")) return null;
@@ -45,21 +50,18 @@ function cleanMessages(raw) {
   return msgs.map((m) => ({ role: m.role, content: m.content }));
 }
 
-// Pull the reply text and any web citations out of an OpenAI Responses API result.
-function readResponse(data) {
+// Pull the reply text and any web-search citations out of a Claude response.
+function readResponse(message) {
   let text = "";
   const sources = [];
   const seen = new Set();
-  for (const item of data.output || []) {
-    if (item.type !== "message") continue;
-    for (const part of item.content || []) {
-      if (part.type !== "output_text") continue;
-      text += part.text;
-      for (const a of part.annotations || []) {
-        if (a.type === "url_citation" && a.url && !seen.has(a.url)) {
-          seen.add(a.url);
-          sources.push({ url: a.url, title: a.title || "" });
-        }
+  for (const block of message.content) {
+    if (block.type !== "text") continue;
+    text += block.text;
+    for (const c of block.citations || []) {
+      if (c.type === "web_search_result_location" && c.url && !seen.has(c.url)) {
+        seen.add(c.url);
+        sources.push({ url: c.url, title: c.title || "" });
       }
     }
   }
@@ -105,43 +107,57 @@ export default {
       }, 200, cors.headers);
     }
 
-    if (!env.OPENAI_API_KEY) {
-      return json({ error: "The server is missing its OpenAI API key." }, 500, cors.headers);
+    if (!env.ANTHROPIC_API_KEY) {
+      return json({ error: "The server is missing its Claude API key." }, 500, cors.headers);
     }
 
-    const payload = {
-      model: env.MODEL || "gpt-5-mini",
-      instructions: SYSTEM_PROMPT,
-      input: messages,
-      max_output_tokens: Number(env.MAX_OUTPUT_TOKENS || 6000),
-      store: false,
-    };
-    if (env.REASONING_EFFORT) payload.reasoning = { effort: env.REASONING_EFFORT };
-    if (env.WEB_SEARCH === "on") payload.tools = [{ type: "web_search" }];
+    const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+    const tools = env.WEB_SEARCH === "on"
+      ? [{ type: "web_search_20260209", name: "web_search", max_uses: 3, allowed_domains: ["rice.edu"] }]
+      : undefined;
 
-    let res;
+    const convo = [...messages];
+    let message;
     try {
-      res = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } catch {
-      return json({ error: "Couldn't reach OpenAI. Try again in a moment." }, 502, cors.headers);
-    }
-
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      console.log("OpenAI error", res.status, JSON.stringify(data.error || data));
-      const msg = res.status === 429
-        ? "Jones Navigator is busy or has reached its usage limit. Try again later."
-        : "The AI service returned an error. Try again in a moment.";
+      for (let i = 0; i <= MAX_CONTINUATIONS; i++) {
+        message = await client.beta.messages
+          .stream({
+            model: env.MODEL || "claude-opus-5-5",
+            max_tokens: Number(env.MAX_TOKENS || 16000),
+            // The instructions and knowledge files are identical on every request, so cache them.
+            system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+            output_config: { effort: env.EFFORT || "low" },
+            ...(tools ? { tools } : {}),
+            // If Claude declines a request on policy grounds, let the API retry on a fallback model.
+            betas: ["server-side-fallback-2026-07-01"],
+            fallbacks: "default",
+            messages: convo,
+          })
+          .finalMessage();
+        if (message.stop_reason !== "pause_turn") break;
+        // Web search paused mid-turn: send the partial turn back so the server resumes it.
+        convo.push({ role: "assistant", content: message.content });
+      }
+    } catch (err) {
+      const status = err && err.status;
+      console.log("Claude API error", status, err && err.message);
+      const msg = status === 429 || status === 529
+        ? "Jones Navigator is busy right now. Try again in a minute."
+        : status === 401
+          ? "The server's Claude API key isn't valid."
+          : status === 400 && /credit|billing/i.test((err && err.message) || "")
+            ? "Jones Navigator has run out of API credit. Let the site owner know."
+            : "The AI service returned an error. Try again in a moment.";
       return json({ error: msg }, 502, cors.headers);
     }
 
-    const { text, sources } = readResponse(data);
+    if (message.stop_reason === "refusal") {
+      return json({ error: "Jones Navigator can't help with that request. Try asking about Rice Business resources, clubs, alumni, or your MBA plan." }, 200, cors.headers);
+    }
+
+    const { text, sources } = readResponse(message);
     if (!text) {
-      return json({ error: "The answer came back empty, probably because it ran too long. Try a narrower question." }, 502, cors.headers);
+      return json({ error: "The answer came back empty. Try a narrower question." }, 502, cors.headers);
     }
     return json({ reply: text, sources }, 200, cors.headers);
   },

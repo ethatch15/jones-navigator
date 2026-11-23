@@ -1,0 +1,16 @@
+{
+  "name": "jones-navigator-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build-knowledge": "node build-knowledge.mjs",
+    "dev": "wrangler dev --port 8787",
+    "deploy": "node build-knowledge.mjs && wrangler deploy"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.13.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}

@@ -6,19 +6,19 @@ An AI guide that helps Rice Business (Jones Graduate School of Business) student
 
 ## How it works
 ```
-Student's browser ──► GitHub Pages site (docs/) ──► Cloudflare Worker (worker/) ──► OpenAI API
-                        public HTML, no secrets       holds the OpenAI key           gpt-5-mini
+Student's browser ──► GitHub Pages site (docs/) ──► Cloudflare Worker (worker/) ──► Claude API
+                        public HTML, no secrets       holds the Claude key           claude-opus-5-5
 ```
 - `docs/`: the website. GitHub Pages serves this folder.
-- `worker/`: a small Cloudflare Worker. It adds the Jones Navigator instructions and knowledge files to each question, calls OpenAI with your key, and only accepts requests from your site.
+- `worker/`: a small Cloudflare Worker. It adds the Jones Navigator instructions and knowledge files to each question, calls Claude with your key, and only accepts requests from your site.
 - `jones-navigator-gpt/`: the source content (instructions and 5 knowledge files). Edit these to change what the assistant knows.
 
-**The OpenAI key never goes in this repo.** It's stored as a Cloudflare secret.
+**The API key never goes in this repo.** It's stored as a Cloudflare secret.
 
 ## One-time setup
 
-### 1. Protect your OpenAI account
-On platform.openai.com, go to **Settings → Limits** and set a low monthly budget (for example $10). The site is public, so this is your safety net.
+### 1. Protect your Claude Console account
+In the Claude Console (platform.claude.com), add prepaid credit under **Billing** and set a low monthly spend limit under **Limits** (for example $10). The site is public, so this is your safety net.
 
 ### 2. Deploy the Worker (free Cloudflare account)
 Run these in a terminal from the `worker` folder:
@@ -32,9 +32,9 @@ npx wrangler login
 ```
 
 ```bash
-npx wrangler secret put OPENAI_API_KEY
+npx wrangler secret put ANTHROPIC_API_KEY
 ```
-Paste your OpenAI key when it asks. It's stored encrypted on Cloudflare.
+Paste your Claude API key (it starts with `sk-ant-`) when it asks. It's stored encrypted on Cloudflare.
 
 ```bash
 npx wrangler deploy
@@ -55,19 +55,19 @@ Open the live site and ask a starter question.
 1. Edit files in `jones-navigator-gpt/` (for example, the club roster each semester).
 2. Rebuild and redeploy the Worker:
 ```bash
-cd worker && node build-knowledge.mjs && npx wrangler deploy
+cd worker && npm install && npm run deploy
 ```
 
 ## Settings (worker/wrangler.toml)
 | Setting | Default | What it does |
 |---|---|---|
 | `ALLOWED_ORIGINS` | your GitHub Pages site and localhost:8000 | Sites allowed to use the Worker |
-| `MODEL` | `gpt-5-mini` | OpenAI model |
-| `REASONING_EFFORT` | `low` | Remove this line if you switch to a non-reasoning model such as `gpt-4.1-mini` |
-| `WEB_SEARCH` | `on` | Lets the assistant check current info on rice.edu. Set it to `off` to save money, or if OpenAI returns an error |
-| `MAX_OUTPUT_TOKENS` | `6000` | Caps the length (and cost) of each answer |
+| `MODEL` | `claude-opus-5-5` | Claude model. `claude-sonnet-5-5` costs less |
+| `EFFORT` | `low` | How hard Claude thinks before answering (`low`, `medium`, `high`) |
+| `WEB_SEARCH` | `on` | Lets Claude search rice.edu sites for current info. Set it to `off` to save money |
+| `MAX_TOKENS` | `16000` | Caps the length (and cost) of each answer |
 
-If chats show "The AI service returned an error," run `npx wrangler tail` in `worker/` while you send a message to see OpenAI's exact error.
+If chats show "The AI service returned an error," run `npx wrangler tail` in `worker/` while you send a message to see the API's exact error.
 
 ## Test locally without spending money
 ```bash
@@ -77,4 +77,4 @@ In a second terminal, from the repo root:
 ```bash
 python3 -m http.server 8000 --directory docs
 ```
-Then open http://localhost:8000/?api=http://localhost:8787/chat. Test mode sends back a sample answer without calling OpenAI. Delete `.dev.vars` (and put your key there as `OPENAI_API_KEY = "..."` if you want real local answers). `.dev.vars` is git-ignored.
+Then open http://localhost:8000/?api=http://localhost:8787/chat. Test mode sends back a sample answer without calling the API. Delete `.dev.vars` (and put your key there as `ANTHROPIC_API_KEY = "..."` if you want real local answers). `.dev.vars` is git-ignored.
