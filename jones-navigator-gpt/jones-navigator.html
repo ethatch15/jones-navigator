@@ -1,0 +1,612 @@
+<title>Jones Navigator Builder Kit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@500;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: fixed left rail of the kit's files (build steps, then knowledge), reading column on the right; rail becomes a top strip on phones. */
+:root {
+  --bg: #f6f7fa;
+  --panel: #ffffff;
+  --ink: #141a2b;
+  --muted: #5a6378;
+  --line: #dde1ea;
+  --accent: #1c3f94;
+  --accent-soft: #e6ecf8;
+  --code-bg: #eef1f6;
+  --ok: #1d7a4c;
+  --display: "Libre Franklin", "Helvetica Neue", Arial, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1320; --panel: #161b2b; --ink: #e6e9f2; --muted: #9aa3b8; --line: #2a3146;
+    --accent: #8fb0ff; --accent-soft: #1f2a48; --code-bg: #1c2234; --ok: #5fd39a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1320; --panel: #161b2b; --ink: #e6e9f2; --muted: #9aa3b8; --line: #2a3146;
+  --accent: #8fb0ff; --accent-soft: #1f2a48; --code-bg: #1c2234; --ok: #5fd39a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.6; }
+.shell { display: grid; grid-template-columns: 290px minmax(0, 1fr); min-height: 100vh; }
+aside { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; height: 100vh; overflow-y: auto;
+  border-right: 1px solid var(--line); background: var(--panel);
+  padding-block: 28px; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: 20px;
+  display: flex; flex-direction: column; gap: 22px; }
+.brand h1 { font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -0.01em; margin: 0; line-height: 1.15; }
+.brand p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+.grp { font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); font-weight: 600; margin: 0 0 6px; }
+nav { display: flex; flex-direction: column; gap: 18px; }
+.navgroup { display: flex; flex-direction: column; gap: 2px; }
+nav a { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-radius: 6px; text-decoration: none; color: var(--ink); border-left: 3px solid transparent; }
+nav a .k { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+nav a .t { font-weight: 500; }
+nav a:hover { background: var(--accent-soft); }
+nav a.on { background: var(--accent-soft); border-left-color: var(--accent); }
+nav a.on .t { color: var(--accent); font-weight: 600; }
+nav a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.note { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; margin-top: auto; }
+main { padding-block: 40px 80px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.col { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.vh { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.kicker { margin: 0; font-family: var(--mono); font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.where { margin: 0; padding: 10px 14px; background: var(--accent-soft); border-radius: 6px; font-size: 14px; }
+.where code { font-family: var(--mono); font-size: 12.5px; }
+button.copy { font: 600 13px var(--body); color: #fff; background: var(--accent); border: 0; border-radius: 6px; padding: 9px 14px; cursor: pointer; }
+:root[data-theme="dark"] button.copy { color: #0f1320; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) button.copy { color: #0f1320; } }
+button.copy.done { background: var(--ok); }
+button.copy.sm { padding: 5px 10px; font-size: 12px; flex: none; }
+.starters { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
+.starters h2 { font-family: var(--display); font-size: 16px; margin: 0 0 10px; }
+.starters ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.starters li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 10px; background: var(--code-bg); border-radius: 6px; }
+.starters li span { min-width: 0; }
+.md { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 32px 28px; min-width: 0; }
+.md h1, .md h2, .md h3 { font-family: var(--display); line-height: 1.25; text-wrap: balance; }
+.md h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.015em; margin: 24px 0 8px; }
+.md h2 { font-size: 21px; font-weight: 700; margin: 30px 0 8px; padding-top: 18px; border-top: 1px solid var(--line); }
+.md h3 { font-size: 16.5px; font-weight: 700; margin: 22px 0 6px; }
+.md p, .md li { max-width: 68ch; }
+.md ul, .md ol { padding-left: 22px; }
+.md li { margin: 3px 0; }
+.md a { color: var(--accent); overflow-wrap: anywhere; }
+.md em:only-child { color: var(--muted); }
+.md code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.md blockquote { margin: 12px 0; padding: 10px 16px; border-left: 3px solid var(--accent); background: var(--code-bg); border-radius: 0 6px 6px 0; }
+.md blockquote p { margin: 4px 0; }
+.tw { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; }
+.md table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.md th { text-align: left; background: var(--code-bg); font-weight: 600; }
+.md th, .md td { padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.md tr:last-child td { border-bottom: 0; }
+@media (max-width: 820px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  aside { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line);
+    padding-block: 18px; padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); }
+  nav { flex-direction: row; overflow-x: auto; gap: 6px; }
+  .navgroup { flex-direction: row; gap: 6px; }
+  .grp, .note { display: none; }
+  nav a { flex: none; border-left: 0; border-bottom: 3px solid transparent; border-radius: 6px 6px 0 0; }
+  nav a.on { border-bottom-color: var(--accent); }
+  main { padding-block: 22px 60px; }
+  .md { padding: 4px 18px 20px; }
+  .md h1 { font-size: 25px; }
+}
+</style>
+
+<div class="shell">
+  <aside>
+    <div class="brand">
+      <h1>Jones Navigator</h1>
+      <p>Builder kit for a student-made Rice Business custom GPT</p>
+    </div>
+    <nav id="nav">
+      <a href="#setup" data-slug="setup" data-group="Build"><span class="k">Start here</span><span class="t">Setup guide</span></a>
+<a href="#instructions" data-slug="instructions" data-group="Build"><span class="k">Paste into Instructions</span><span class="t">GPT instructions</span></a>
+<a href="#programs" data-slug="programs" data-group="Knowledge"><span class="k">Knowledge file 01</span><span class="t">Programs &amp; curriculum</span></a>
+<a href="#clubs" data-slug="clubs" data-group="Knowledge"><span class="k">Knowledge file 02</span><span class="t">Clubs &amp; organizations</span></a>
+<a href="#career" data-slug="career" data-group="Knowledge"><span class="k">Knowledge file 03</span><span class="t">Career &amp; alumni</span></a>
+<a href="#rice" data-slug="rice" data-group="Knowledge"><span class="k">Knowledge file 04</span><span class="t">Rice &amp; Houston resources</span></a>
+<a href="#plan" data-slug="plan" data-group="Knowledge"><span class="k">Knowledge file 05</span><span class="t">2-year planning framework</span></a>
+    </nav>
+    <p class="note">Student-built and not an official Rice University service. Compiled November 2026. Check club rosters and dates on business.rice.edu each semester.</p>
+  </aside>
+  <main>
+    <div class="col">
+      <div id="starters" class="starters" hidden>
+        <h2>Conversation starters</h2>
+        <ul><li><span>Build my 2-year MBA plan. I&#x27;m targeting consulting.</span><button class="copy sm" type="button" data-text="Build my 2-year MBA plan. I&#x27;m targeting consulting.">Copy</button></li><li><span>Which clubs should I join as a 1Y interested in energy?</span><button class="copy sm" type="button" data-text="Which clubs should I join as a 1Y interested in energy?">Copy</button></li><li><span>Help me find and reach out to Rice alumni at Microsoft.</span><button class="copy sm" type="button" data-text="Help me find and reach out to Rice alumni at Microsoft.">Copy</button></li><li><span>Where do I go for help with resumes, visas, or stress?</span><button class="copy sm" type="button" data-text="Where do I go for help with resumes, visas, or stress?">Copy</button></li></ul>
+      </div>
+      <section id="view-setup" class="view" hidden>
+  <header class="vh"><div><p class="kicker">Start here</p></div></header>
+  
+  <article class="md" data-src="src-setup"></article>
+  <script type="text/plain" id="src-setup"># Jones Navigator: Custom GPT Setup Guide
+
+This is a ready-to-load custom GPT that helps Rice Business (Jones Graduate School of Business) students find resources, clubs, and alumni, and plan their 2-year MBA.
+
+## Files
+| File | Where it goes |
+|---|---|
+| `instructions.md` | GPT builder → **Configure → Instructions** (paste the text below the comment line) |
+| `knowledge/01-programs-and-curriculum.md` | **Knowledge** upload |
+| `knowledge/02-clubs-and-organizations.md` | **Knowledge** upload |
+| `knowledge/03-career-and-alumni.md` | **Knowledge** upload |
+| `knowledge/04-rice-university-resources.md` | **Knowledge** upload |
+| `knowledge/05-two-year-planning-framework.md` | **Knowledge** upload |
+
+## Build it in ChatGPT (about 10 minutes)
+1. Go to chatgpt.com → **Explore GPTs** → **+ Create** → **Configure** tab.
+2. **Name**: `Jones Navigator`
+3. **Description**: `Your Rice Business guide to resources, clubs, alumni, and a personalized 2-year MBA plan.`
+4. **Instructions**: paste from `instructions.md`.
+5. **Conversation starters**:
+   - `Build my 2-year MBA plan. I'm targeting consulting.`
+   - `Which clubs should I join as a 1Y interested in energy?`
+   - `Help me find and reach out to Rice alumni at Microsoft.`
+   - `Where do I go for help with resumes, visas, or stress?`
+6. **Knowledge**: upload the 5 files in `knowledge/`.
+7. **Capabilities**: turn on **Web Search** (so it can check current club rosters and dates on business.rice.edu) and **Code Interpreter & Data Analysis** (so it can export plans as CSV or checklists). Image generation is optional.
+8. **Profile picture**: optional. Use something generic; skip official Rice logos unless you have permission.
+9. **Save → Share**: choose *Only me* to test, *Anyone with the link* for classmates, or *GPT Store*. If you share it publicly, keep the name and description clear that it's student-built and **not an official Rice University service**.
+
+## Test prompts before sharing
+- "I'm an international 1Y career switcher from engineering into product management. Plan my 2 years." *It should ask about visa needs and flag sponsorship and OISS.*
+- "Give me the email of a Rice alum at McKinsey." *It should decline to invent contacts and point to the directory, LinkedIn, and clubs instead.*
+- "What's the Custom Core?" *It should answer from the knowledge files and link the curriculum page.*
+- "Is the Golf Club still active?" *It should browse or tell you to verify.*
+
+## Keeping it accurate (do this each semester)
+- Refresh `02-clubs-and-organizations.md` from the official club roster and the CDO organizations page.
+- Update recruiting dates in `03-career-and-alumni.md` after the CDO publishes the year's calendar.
+- Re-upload the changed files in the GPT builder (delete the old version first).
+- Good additions if you have them: the current academic calendar, the CDO recruiting calendar, club one-pagers, and an elective list for each specialization. Get permission before uploading anything that isn't public.
+
+## Optional upgrades
+- **Actions**: connect a Google Calendar or Notion action so the GPT can push plan milestones straight into a student's calendar or workspace.
+- **Same setup elsewhere**: the instructions and knowledge files also work as a Claude Project (paste the instructions into the project instructions, then add the files to project knowledge) or as a Gemini Gem.
+
+## Sources used
+- Clubs: https://business.rice.edu/rice-mba/beyond-classroom/student-clubs, https://business.rice.edu/professional-associations, https://business.rice.edu/social-clubs, https://business.rice.edu/student-government
+- Curriculum: https://business.rice.edu/rice-mba/full-time-mba/curriculum, https://ga.rice.edu/programs-study/departments-programs/business/business/business-administration-mba-full-time/, https://business.rice.edu/sites/default/files/2026-08/full-time-mba-program-card.pdf
+- Specializations: https://business.rice.edu/rice-mba/full-time-mba/degree-concentrations
+- Career/alumni: https://business.rice.edu/department/career-development-office, https://cdo.business.rice.edu/channels/alumni/, https://cdo.business.rice.edu/signature-student-programming/, https://business.rice.edu/admissions-blog/how-rice-business-alumni-help-mba-students-succeed
+- Entrepreneurship: https://business.rice.edu/lilie-lab, https://news.rice.edu/news/2025/rice-business-named-presenting-sponsor-2025-rice-business-plan-competition, https://news.rice.edu/news/2026/student-founded-bionostic-wins-rice-launch-challenge
+</script>
+</section>
+<section id="view-instructions" class="view" hidden>
+  <header class="vh"><div><p class="kicker">Paste into Instructions</p></div><button class="copy" type="button" data-src="src-instructions">Copy instructions</button></header>
+  <p class="where">Paste into <b>Configure → Instructions</b>. 5,330 of 8,000 characters.</p>
+  <article class="md" data-src="src-instructions"></article>
+  <script type="text/plain" id="src-instructions">You are **Jones Navigator**, a friendly, practical guide for students at Rice University's Jones Graduate School of Business ("Rice Business"). You help students (1) find Rice Business and Rice University resources, (2) discover clubs and student organizations, (3) connect with alumni the right way, and (4) build a personalized 2-year MBA plan.
+
+## Who you serve
+Mainly Full-Time MBA students (first-years "1Ys" and second-years "2Ys") and admitted students. You can also help Professional, Hybrid, Executive, and Online (MBA@Rice) students, but note that their calendars, recruiting, and club access differ, and ask which program they are in.
+
+## Knowledge and accuracy rules (most important)
+1. Use your uploaded knowledge files first. They cover programs and curriculum, clubs, career and alumni resources, Rice-wide resources, and a 2-year planning framework.
+2. Club rosters, course numbers, deadlines, staff, and recruiting dates change every year. When a student needs a current detail, use web browsing to check official sources (business.rice.edu, cdo.business.rice.edu, ga.rice.edu, rice.edu). Say when you could not verify something.
+3. Never invent club names, course numbers, deadlines, events, staff names, or alumni. If you don't know, say so and point to the office or page that will know.
+4. Always end resource answers with a "Where to go" line: the office, page link, or person type (e.g., "CDO career advisor", "club VP of Careers").
+5. You are not an official Rice Business service. For degree requirements, visas, financial aid, grades, or policy questions, give your best general guidance, then tell them to confirm with the Rice Business program office, the Office of International Students & Scholars, or the relevant office.
+
+## Alumni rules
+- Do not make up or guess specific alumni. Do not look up private contact details.
+- Help students find alumni through legitimate channels: the Rice Business alumni directory (Rice Portal), LinkedIn's alumni search (filter School = Rice University / Jones Graduate School of Business, then by company, title, city), CDO alumni programs (e.g., Alumni Mock-A-Thon, Alumni in Residence), club alumni panels, and Industry Weeks.
+- Offer to draft outreach: a short LinkedIn connection note (under 300 characters), a cold email, and a list of 5–8 informational-interview questions tailored to the student's target role.
+
+## How to run a conversation
+- Start by learning, in at most 3 quick questions: program and year (1Y/2Y), target industry/function (or "exploring"), and any constraints (international student / visa, career switcher, family, working part-time, entrepreneurship interest).
+- Keep answers skimmable: short headers, bullets, and a clear next step. No walls of text.
+- When a student is undecided, help them explore: suggest 2–3 candidate paths, the clubs and electives that test each one, and one low-cost action per path this month (coffee chat, club event, case/workshop).
+
+## 2-year planning mode
+When a student asks for a plan (or says "plan my MBA", "roadmap", "what should I do when"), build it from the planning framework in your knowledge files:
+1. Confirm goal(s): primary target, backup target, and any "must-haves" (city, industry, salary, sponsorship).
+2. Produce a term-by-term plan: Pre-MBA summer → 1Y Fall → 1Y Spring → Summer internship → 2Y Fall → 2Y Spring → Post-grad.
+3. For each term include: Academics (core, Custom Core, electives, specialization progress), Recruiting (timing for their industry), Clubs & leadership, Networking/alumni, and Wellbeing/personal.
+4. Flag industry-specific timing. Consulting and investment banking recruit very early (networking starts almost immediately in 1Y Fall). Energy, tech, CPG/marketing, healthcare, and corporate finance vary more; tell the student to confirm dates with the CDO and the relevant club.
+5. Format the plan as a table or checklist. Offer to export it as a semester-by-semester checklist the student can paste into Notion, Google Docs, or a calendar.
+6. Revisit: invite students to come back each term so you can update the plan with what changed (offers, new interests, grades, club roles).
+
+## Tone
+Encouraging, direct, and specific, like a helpful 2Y peer mentor who has the CDO's phone number. Celebrate progress, normalize uncertainty (many students pivot), and protect wellbeing: MBA "FOMO" is real, so help students prioritize instead of joining everything.
+
+## Things you don't do
+- Don't write graded assignments or case write-ups for students; you can explain concepts, give feedback, and help them structure their own work, consistent with the Rice Honor Code.
+- Don't give legal, immigration, or financial advice as final answers; point to the right office.
+- Don't share or speculate about other students' or alumni's personal information.
+
+## Handy starting answers
+- Career help → Career Development Office (CDO): cdo.business.rice.edu, (713) 348-2622, McNair Hall, 6100 Main St.
+- Clubs → business.rice.edu/rice-mba/beyond-classroom/student-clubs and the CDO organizations page.
+- Curriculum → business.rice.edu/rice-mba/full-time-mba/curriculum and the Rice General Announcements (ga.rice.edu).
+- Entrepreneurship → Lilie (Liu Idea Lab for Innovation & Entrepreneurship), Rice Alliance, Rice Business Plan Competition, The Ion.
+</script>
+</section>
+<section id="view-programs" class="view" hidden>
+  <header class="vh"><div><p class="kicker">Knowledge file 01</p></div><button class="copy" type="button" data-src="src-programs">Copy file text</button></header>
+  <p class="where">Upload under <b>Configure → Knowledge</b> as <code>01-programs-and-curriculum.md</code>. To make the file, paste this text into a new file with that name.</p>
+  <article class="md" data-src="src-programs"></article>
+  <script type="text/plain" id="src-programs"># Rice Business (Jones Graduate School of Business): Programs & Curriculum
+
+_Last compiled: November 2026. Course lists change yearly; verify on the official pages below._
+
+## MBA programs at Rice Business
+- **Full-Time MBA**: 2 years, in person, at McNair Hall on Rice's main campus (6100 Main St, Houston, TX 77005).
+- **Professional MBA**: evening program for working professionals.
+- **Hybrid MBA**: mix of online and in-person weekends.
+- **Executive MBA**: weekend format for experienced leaders.
+- **Online MBA (MBA@Rice)**: fully online, with some in-person immersions.
+- Joint and dual degrees are offered with other Rice schools (for example MD/MBA and engineering/science pairings). Check the official dual-degree page for the current list.
+
+## Full-Time MBA structure
+### Year 1: Core
+The first year is mostly the **core curriculum** in the main functional areas of business.
+
+Sample 1Y **Fall** core (from a recent program card):
+- Strategy I
+- Managerial Economics
+- Data Analysis
+- Negotiations
+- Financial Accounting
+- Organizational Behavior
+- Finance
+- Marketing
+
+Sample 1Y **Spring** core:
+- Strategy II
+- Corporate Social Responsibility
+- Operations Management
+- Managerial Accounting
+- Leading Change
+- **Custom Core**: students pick 2 courses in the spring of 1Y. Recent options: Economic Environment of Business, Business-Government Relations, Business Law, Management Control, New Enterprises, Leading Across Differences.
+- First-year electives
+
+### Action Learning Project (ALP), MGMT 599
+- Required 1Y spring consulting project.
+- Student teams work with faculty and company liaisons on a real business problem and present their findings to senior management.
+- Planning tip: ALP is an early chance to test an industry (energy, healthcare, tech, nonprofit). Choose your preference with your target career in mind, and use the work as a story for interviews and your resume.
+
+### Year 2: Electives
+- 2Y is almost all electives. Rice offers **100+ electives**.
+- 2Y fall is also when most full-time recruiting happens for students who don't convert their internship offer.
+
+### Specializations (Rice's name for concentrations)
+- The Full-Time MBA offers **10 specializations**. Each takes roughly **9–12 credit hours**.
+- Confirmed in current Rice materials: Accounting, Business Analytics, Energy, Entrepreneurship, Finance, Health Care, Leadership, Marketing (plus others; check the official page for the full current 10).
+- Specializations are optional, and stacking more than one takes careful scheduling.
+- Official list: https://business.rice.edu/rice-mba/full-time-mba/degree-concentrations
+
+## Official sources
+- Curriculum: https://business.rice.edu/rice-mba/full-time-mba/curriculum
+- Rice General Announcements (degree requirements): https://ga.rice.edu/programs-study/departments-programs/business/business/business-administration-mba-full-time/
+- Program card (PDF, latest): https://business.rice.edu/sites/default/files/2026-08/full-time-mba-program-card.pdf
+- Areas of study: https://business.rice.edu/ftmba/admitted-student-welcome/areas-of-study
+
+## Who to ask
+- Registration, degree audit, course waivers: Rice Business program office / academic advising.
+- Course content and fit: faculty office hours, 2Ys who took the course, the related professional club.
+</script>
+</section>
+<section id="view-clubs" class="view" hidden>
+  <header class="vh"><div><p class="kicker">Knowledge file 02</p></div><button class="copy" type="button" data-src="src-clubs">Copy file text</button></header>
+  <p class="where">Upload under <b>Configure → Knowledge</b> as <code>02-clubs-and-organizations.md</code>. To make the file, paste this text into a new file with that name.</p>
+  <article class="md" data-src="src-clubs"></article>
+  <script type="text/plain" id="src-clubs"># Rice Business Clubs & Student Organizations
+
+_Last compiled: November 2026. Club names and rosters change almost every year. Before you recommend a club as current, check the official roster: https://business.rice.edu/rice-mba/beyond-classroom/student-clubs and https://cdo.business.rice.edu/organizations_
+
+## Student government
+- **Rice Business Student Association** (Full-Time MBA): the official student association. It connects students with administration, faculty, and staff, and runs community events. Older materials call it the **Jones Student Association (JSA)**.
+- Leadership roles (class reps, committee chairs) open each spring for the next year.
+
+## Professional associations (career-focused)
+These clubs are usually the main way into recruiting: case/interview prep, employer treks, alumni panels, Industry Weeks, and conferences. Names below come from Rice Business pages; confirm the current list.
+- Consulting Association
+- Finance / investment groups
+- Energy club(s) (Houston's energy ecosystem is a signature strength)
+- Entrepreneurship Association
+- Marketing association
+- Health care / life sciences club
+- Technology Association
+- Operations & Supply Chain Club
+- Strategy Association
+- Jones Public Policy Roundtable
+- Net Impact (social impact and sustainability)
+- Professional associations page: https://business.rice.edu/professional-associations
+
+## Affinity & identity organizations
+- Black Business Student Association
+- Latin Business Student Association
+- South Asian Business Association
+- Rice Business Women's Organization
+- Out & Allied (LGBTQ+ students and allies)
+- Rice Business Veterans Association
+- Rice Business Jewish Student Association
+- Jones Christian Fellowship
+- International-student-focused groups (check the current roster)
+
+## Social & interest clubs
+- Examples on Rice pages: Golf Club, Beer Club, Global Food Experience, and others.
+- Social clubs page: https://business.rice.edu/social-clubs
+
+## How to choose clubs (advice for the GPT to give)
+1. **1Y Fall: join 2–3 professional clubs** that match your top target and one backup. Pay dues early, because some recruiting resources are members-only.
+2. **Join 1–2 affinity or social clubs** for community and wellbeing.
+3. **Go deep, not wide.** Recruiters and classmates notice leadership more than membership.
+4. **Run for leadership in 1Y spring.** 2Y officer roles (President, VP Careers, VP Alumni Relations, conference chair) are strong resume lines and alumni-network builders.
+5. **Use clubs for alumni access.** Club alumni panels and treks are the warmest path to alumni at target firms.
+
+## National conferences many MBA students attend (not Rice-run)
+- Prospanica (Hispanic/Latino professionals), NSHMBA legacy
+- National Black MBA Association (NBMBAA)
+- Reaching Out MBA (ROMBA) for LGBTQ+ students
+- Forté Foundation (women in business)
+- Consortium for Graduate Study in Management (check whether Rice is a current member school)
+These often bring early recruiting opportunities. Check dates in 1Y summer and fall.
+</script>
+</section>
+<section id="view-career" class="view" hidden>
+  <header class="vh"><div><p class="kicker">Knowledge file 03</p></div><button class="copy" type="button" data-src="src-career">Copy file text</button></header>
+  <p class="where">Upload under <b>Configure → Knowledge</b> as <code>03-career-and-alumni.md</code>. To make the file, paste this text into a new file with that name.</p>
+  <article class="md" data-src="src-career"></article>
+  <script type="text/plain" id="src-career"># Career Development & Alumni Network
+
+_Last compiled: November 2026._
+
+## Career Development Office (CDO)
+- Website: https://cdo.business.rice.edu
+- Phone: (713) 348-2622
+- Location: McNair Hall, 6100 Main Street, Houston, TX 77005
+- Services: one-on-one career advising (Full-Time students have a set number of personalized advising appointments; recent materials say five), resume and cover letter review, mock interviews, workshops, recruiting events, employer engagement, a job/internship posting platform, and curated industry resources.
+- **Industry Weeks**: themed weeks for exploring careers (alumni and employer panels, workshops) by industry.
+- **Signature programming**: https://cdo.business.rice.edu/signature-student-programming/
+- Incoming-student resources: https://cdo.business.rice.edu/channels/incoming-students/
+- MBA@Rice (online) students also get career advising, online workshops, networking, and curated resources: https://cdo.business.rice.edu/channels/mbarice-students/
+
+## Alumni network
+- **10,000+ Rice Business alumni in 54+ countries**, across Full-Time, Professional, Executive, Hybrid, and Online programs. Houston has the biggest concentration, especially in energy, consulting, finance, healthcare, and tech.
+- **How to find alumni**
+  1. **Rice Portal alumni directory**: the official directory (needs a Rice login).
+  2. **LinkedIn alumni search**: go to the Rice University school page, open "Alumni," and filter by company, title, and location. Add "Jones" or "Rice Business" / "MBA" as keywords.
+  3. **Rice Business alumni LinkedIn group**
+  4. **Club alumni panels, treks, and conferences**
+  5. **CDO alumni programs**
+     - **Alumni Mock-A-Thon**: an annual event where students do one-on-one mock interviews with alumni (past participants worked at firms such as ExxonMobil, Amazon, Google, Deloitte, Accenture).
+     - **Alumni in Residence**: alumni come back to campus to meet students.
+     - **Corporate Ambassador Program**: alumni volunteers who act as points of contact at their companies.
+  6. **Professors and staff**: ask for warm introductions.
+- Alumni resources hub: https://cdo.business.rice.edu/channels/alumni/
+
+## Outreach templates (the GPT should adapt these)
+**LinkedIn connection note (<300 chars)**
+> Hi [Name], I'm a [1Y/2Y] Rice MBA exploring [industry/role]. I saw you moved from [X] to [Y] at [Company] and would love 15–20 min to hear how you made that switch. Owl to Owl, I'd really appreciate it!
+
+**Cold email**
+> Subject: Rice MBA student, quick question about [Company/Role]
+> Hi [Name], I'm a [year] in the Rice Business Full-Time MBA, interested in [role] at firms like [Company]. Your path from [background] stood out to me. Would you have 20 minutes in the next two weeks for a call? I'm happy to work around your schedule. Thank you, [Name] | [LinkedIn] | [Phone]
+
+**Informational-interview questions**
+1. What does a typical week look like in your role?
+2. What surprised you most after joining [Company]?
+3. What did you do during your MBA that best prepared you?
+4. Which skills or experiences make an MBA candidate stand out to your team?
+5. How does recruiting at [Company] work for Rice students (events, referrals, timing)?
+6. Who else would you suggest I speak with?
+Follow up within 24 hours with a thank-you, and update them once you have news.
+
+## Recruiting timing (general MBA patterns; confirm with the CDO)
+| Industry | Internship networking starts | Internship interviews | Notes |
+|---|---|---|---|
+| Consulting | Right away in 1Y Fall (Aug–Oct) | ~Jan | Case prep starts in fall. Use the Consulting Association's case partners. |
+| Investment banking | Before or right at matriculation | Fall–Jan (often earlier) | Very early. Technicals plus networking. |
+| Energy (operators, trading, energy finance) | 1Y Fall | Fall–Spring | Houston advantage. Many on-campus employers. |
+| Tech (product, strategy, ops) | 1Y Fall | Jan–Apr | Many off-campus or rolling processes. |
+| CPG / brand marketing | 1Y Fall | Jan–Feb | Often tied to case competitions and conferences. |
+| Healthcare / life sciences | 1Y Fall | Jan–Apr | Texas Medical Center is next door. |
+| Corporate finance / F500 rotational | 1Y Fall | Fall–Spring | Watch rotational program deadlines. |
+| Startups / VC / entrepreneurship | Ongoing | Rolling, often spring/summer | Lilie, Rice Alliance, The Ion. Plan for "just-in-time" hiring. |
+
+## International students
+- Ask about CPT/OPT, STEM-designated options, and work authorization at the **Office of International Students & Scholars (OISS)**: https://oiss.rice.edu
+- When building a target list, check which employers sponsor visas, and start networking early.
+</script>
+</section>
+<section id="view-rice" class="view" hidden>
+  <header class="vh"><div><p class="kicker">Knowledge file 04</p></div><button class="copy" type="button" data-src="src-rice">Copy file text</button></header>
+  <p class="where">Upload under <b>Configure → Knowledge</b> as <code>04-rice-university-resources.md</code>. To make the file, paste this text into a new file with that name.</p>
+  <article class="md" data-src="src-rice"></article>
+  <script type="text/plain" id="src-rice"># Rice University & Houston Resources for MBA Students
+
+_Last compiled: November 2026. Verify hours, eligibility, and links on rice.edu._
+
+## Entrepreneurship & innovation
+- **Lilie, the Liu Idea Lab for Innovation & Entrepreneurship**: Rice's campus home for entrepreneurship, based at Rice Business. Runs courses, programs, a summer venture studio, and the **H. Albert Napier Rice Launch Challenge** (an annual student startup competition with cash prizes; past top prizes have been around $50,000). Lilie marked its 10th anniversary in 2026. https://business.rice.edu/lilie-lab
+- **Rice Alliance for Technology & Entrepreneurship**: runs the **Rice Business Plan Competition (RBPC)**, the world's largest and richest graduate-student startup competition (the 2026 competition was the 26th, with 42 graduate-led teams and $600K+ in prizes). MBA students can volunteer, judge-shadow, and network with VCs.
+- **The Ion**: Rice's innovation hub in Midtown Houston, with startups, events, and corporate innovation programs.
+
+## Leadership & policy
+- **Doerr Institute for New Leaders**: free, evidence-based leadership coaching and development for Rice students, including graduate students.
+- **Baker Institute for Public Policy**: public policy research center (energy, health, and economic policy). Good for events and research if you're interested in energy or policy.
+
+## Academic & research support
+- **Fondren Library**: databases (many business and market-research databases are available through the library), study rooms, research librarians, including a business librarian.
+- **Center for Academic and Professional Communication (CAPC)**: writing and presentation coaching.
+
+## Wellbeing & student life
+- **Rice Wellbeing and Counseling Center**: counseling, crisis support, and wellness programs.
+- **Student Health Services**
+- **Recreation Center (Rice Rec)**: gym, pool, and classes.
+- **Graduate Student Association (GSA)**: university-wide graduate student government, plus events across schools.
+- **Office of International Students & Scholars (OISS)**: visas, CPT/OPT, and international student support. https://oiss.rice.edu
+- **Disability Resource Center**: accommodations.
+- **Rice Owls athletics**: student tickets, and a good social outing with classmates.
+
+## Houston ecosystem (why it matters for planning)
+- **Energy capital**: majors, oilfield services, utilities, trading houses, and energy-transition startups, many within a short drive.
+- **Texas Medical Center**: the world's largest medical complex, right next to Rice. Healthcare strategy and operations roles, plus TMC Innovation.
+- **Port of Houston and logistics**: operations and supply chain careers.
+- **Fortune 500 headquarters, consulting offices, and a growing startup and VC scene** (Ion District, Greentown Labs Houston).
+
+## Quick routing table
+| Need | Go to |
+|---|---|
+| Resume, interviews, job search | CDO (cdo.business.rice.edu) |
+| Courses, waivers, degree requirements | Rice Business program office; ga.rice.edu |
+| Startup idea or competition | Lilie; Rice Alliance (RBPC) |
+| Leadership coaching | Doerr Institute |
+| Visa, OPT/CPT | OISS |
+| Stress, burnout, mental health | Rice Wellbeing and Counseling Center |
+| Market research data | Fondren Library business librarian |
+| Clubs | business.rice.edu club pages; Rice Business Student Association |
+</script>
+</section>
+<section id="view-plan" class="view" hidden>
+  <header class="vh"><div><p class="kicker">Knowledge file 05</p></div><button class="copy" type="button" data-src="src-plan">Copy file text</button></header>
+  <p class="where">Upload under <b>Configure → Knowledge</b> as <code>05-two-year-planning-framework.md</code>. To make the file, paste this text into a new file with that name.</p>
+  <article class="md" data-src="src-plan"></article>
+  <script type="text/plain" id="src-plan"># 2-Year Full-Time MBA Planning Framework
+
+Use this framework to build a personalized, term-by-term plan. Adjust timing to the student's industry using the recruiting table in 03-career-and-alumni.md, and always tell them to confirm dates with the CDO and club leaders.
+
+## Inputs to collect
+- Program and year (1Y / 2Y / admitted)
+- Primary target (industry + function + city) and one backup
+- Background (career switcher? years of experience? quant comfort?)
+- Constraints: visa sponsorship, family, finances, part-time work
+- Interests: entrepreneurship, specializations, international experience, leadership roles
+
+## Term-by-term plan template
+
+### Pre-MBA summer (admitted students)
+- **Academics**: finish any pre-work and quant refreshers (accounting, Excel, stats).
+- **Career**: draft a resume in MBA format; write a 1-page "career thesis" (why this role, why now); list 20 target companies.
+- **Network**: connect with 5–10 alumni or 2Ys in your target field; join the incoming class group chat.
+- **Clubs**: look over club offerings and pick your 2–3 professional plus 1–2 affinity/social clubs.
+- **Personal**: sort out housing and finances; rest before orientation.
+
+### 1Y Fall (Aug–Dec): Explore fast, then focus
+- **Academics**: core courses; build study-group habits.
+- **Career**: CDO advising appointment in the first month; resume review; Industry Weeks; start case or technical prep if you're targeting consulting or banking.
+- **Clubs**: join and pay dues; attend corporate presentations; sign up for treks.
+- **Network**: 2–4 coffee chats per week during peak season; track them in a spreadsheet (name, firm, date, next step).
+- **Milestone**: by mid-October, narrow to 1 primary path and 1 backup.
+- **Personal**: guard sleep and exercise. Say no to some events.
+
+### 1Y Spring (Jan–May): Land the internship
+- **Academics**: rest of the core, **Custom Core** (2 picks), first-year electives, and the **Action Learning Project**. Pick an ALP that supports your target story.
+- **Career**: peak internship interview season (Jan–Mar for most structured industries); off-cycle and startup roles keep going into April and May.
+- **Clubs**: run for 2Y leadership roles; compete in case competitions.
+- **Specialization**: map which electives you need for your chosen specialization.
+- **Entrepreneurship track**: Lilie programs, the Rice Launch Challenge, volunteering at the Rice Business Plan Competition.
+
+### Summer internship (May/Jun–Aug)
+- Aim for a return offer: set goals with your manager in week 1, get a mid-point check-in, give a strong final presentation.
+- Meet 10+ people beyond your team; note who might act as references.
+- Keep a "wins log" for your resume and 2Y interviews.
+- If you don't get an offer, or don't want one, start 2Y recruiting outreach in August.
+
+### 2Y Fall (Aug–Dec): Convert or recruit
+- **Career**: decide on return offers (watch the deadline); full-time recruiting for everyone else; mentor 1Ys (great for network-building).
+- **Academics**: electives tied to your target role and specialization.
+- **Clubs**: lead. Run events, conferences, and 1Y prep.
+- **Optional**: international/exchange courses, independent study, a startup.
+
+### 2Y Spring (Jan–May): Finish strong
+- **Career**: finish the full-time search (just-in-time hiring for tech, startups, VC); negotiate offers with CDO support.
+- **Academics**: finish specialization credits; run a degree audit early in the semester.
+- **Transition**: hand off club leadership; join alumni groups; plan the move.
+- **Personal**: enjoy graduation and the class you built.
+
+### Post-grad (first year as an alum)
+- Join the Rice Business alumni network and LinkedIn group; update the directory.
+- Volunteer for the Alumni Mock-A-Thon or Corporate Ambassador Program.
+- Plan to check in with 3–5 mentors each quarter.
+
+## Output format the GPT should use
+| Term | Academics | Recruiting | Clubs & Leadership | Networking | Wellbeing |
+|---|---|---|---|---|---|
+| ... | ... | ... | ... | ... | ... |
+
+Then add:
+- **Top 3 priorities this month** (specific and checkable)
+- **Key dates to confirm** (with the office or club to ask)
+- **Backup plan trigger** (e.g., "If no consulting offers by Feb 15 → activate the corporate strategy backup list")
+
+## Path archetypes (starting points)
+- **Consulting**: Consulting Association; Strategy electives; case prep from September; ALP with a strategy focus.
+- **Energy / energy transition**: Energy club; Energy specialization; Baker Institute events; Houston operator and trading treks.
+- **Finance / IB / IM**: Finance clubs; Finance specialization; technical prep before you arrive; student investment fund if one is offered.
+- **Tech / product**: Technology Association; Business Analytics specialization; a side project or PM case practice.
+- **Healthcare**: Health care club; Health Care specialization; TMC exposure.
+- **Entrepreneurship**: Entrepreneurship Association; Lilie; Rice Launch Challenge; RBPC; The Ion; New Enterprises (Custom Core).
+- **Marketing / CPG**: Marketing association; Marketing specialization; brand case competitions.
+- **Undecided**: one exploration club per candidate path; Industry Weeks; 3 coffee chats per path by October.
+</script>
+</section>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script>
+(function () {
+  // Group nav links under headings
+  var nav = document.getElementById('nav');
+  var links = Array.prototype.slice.call(nav.querySelectorAll('a'));
+  nav.innerHTML = '';
+  ['Build', 'Knowledge'].forEach(function (g) {
+    var wrap = document.createElement('div');
+    var head = document.createElement('p'); head.className = 'grp';
+    head.textContent = g === 'Build' ? 'Build the GPT' : 'Knowledge files (upload all 5)';
+    var box = document.createElement('div'); box.className = 'navgroup';
+    links.filter(function (a) { return a.dataset.group === g; }).forEach(function (a) { box.appendChild(a); });
+    wrap.appendChild(head); wrap.appendChild(box); nav.appendChild(wrap);
+  });
+
+  // Render markdown
+  document.querySelectorAll('article.md').forEach(function (el) {
+    var src = document.getElementById(el.dataset.src).textContent;
+    src = src.replace(/<!--[\s\S]*?-->/g, '');
+    el.innerHTML = window.marked ? marked.parse(src) : '<pre>' + src.replace(/</g, '&lt;') + '</pre>';
+    el.querySelectorAll('table').forEach(function (t) {
+      var w = document.createElement('div'); w.className = 'tw';
+      t.parentNode.insertBefore(w, t); w.appendChild(t);
+    });
+    el.querySelectorAll('a[href^="http"]').forEach(function (a) { a.target = '_blank'; a.rel = 'noopener'; });
+  });
+
+  // Routing
+  var slugs = links.map(function (a) { return a.dataset.slug; });
+  function show() {
+    var s = location.hash.replace('#', '');
+    if (slugs.indexOf(s) < 0) s = 'setup';
+    slugs.forEach(function (x) { document.getElementById('view-' + x).hidden = x !== s; });
+    links.forEach(function (a) { a.classList.toggle('on', a.dataset.slug === s); });
+    document.getElementById('starters').hidden = s !== 'instructions';
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', show);
+  show();
+
+  // Copy buttons
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('button.copy'); if (!b) return;
+    var text = b.dataset.text != null ? b.dataset.text : document.getElementById(b.dataset.src).textContent;
+    var label = b.textContent;
+    function ok() { b.textContent = 'Copied'; b.classList.add('done'); setTimeout(function () { b.textContent = label; b.classList.remove('done'); }, 1600); }
+    function fallback() {
+      var ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+      var done = false; try { done = document.execCommand('copy'); } catch (err) {}
+      document.body.removeChild(ta);
+      if (done) ok(); else { b.textContent = 'Select the text and copy it'; }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fallback); else fallback();
+  });
+})();
+</script>

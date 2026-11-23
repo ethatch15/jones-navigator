@@ -1,0 +1,15 @@
+name = "jones-navigator"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[vars]
+# Websites allowed to call this Worker, comma-separated. Update this if your GitHub username changes.
+ALLOWED_ORIGINS = "https://ethatch15.github.io,http://localhost:8000"
+MODEL = "gpt-5-mini"
+REASONING_EFFORT = "low"
+MAX_OUTPUT_TOKENS = "6000"
+# "on" lets the model search the web for current club rosters and dates (costs a little more per search).
+WEB_SEARCH = "on"
+
+# The OpenAI key is NOT stored here. Add it as a secret:
+#   npx wrangler secret put OPENAI_API_KEY
